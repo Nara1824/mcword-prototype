@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Admin — MacWorld Ecuador</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:'Outfit',sans-serif;background:#f0f0f5;color:#1d1d1f;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+
+/* ── LAYOUT ── */
+.admin-wrap{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{width:220px;flex-shrink:0;background:#1c1c1e;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo h1{font-size:17px;font-weight:800;color:#fff}
+.sidebar-logo span{display:block;font-size:11px;font-weight:500;color:#C9A227;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+.sidebar-nav{padding:16px 12px;flex:1;display:flex;flex-direction:column;gap:4px}
+.nav-btn{padding:10px 16px;border-radius:8px;background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;font-weight:500;cursor:pointer;text-align:left;transition:all .2s;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:10px}
+.nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,.1);color:#fff}
+.nav-btn.active{color:#C9A227}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)}
+.sidebar-user{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:10px;word-break:break-all}
+.btn-logout{width:100%;padding:8px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);font-size:13px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s}
+.btn-logout:hover{background:rgba(255,60,60,.2);color:#ff6b6b;border-color:rgba(255,60,60,.3)}
+
+/* ── TOPBAR MOBILE ── */
+.topbar{display:none;align-items:center;justify-content:space-between;padding:0 16px;height:56px;background:#1c1c1e;position:fixed;top:0;left:0;right:0;z-index:200}
+.topbar h1{font-size:16px;font-weight:700;color:#fff}
+.hamburger{background:none;border:none;cursor:pointer;padding:6px;display:flex;flex-direction:column;gap:4px}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .3s}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.sidebar-overlay.open{display:block}
+@media(max-width:768px){
+  .topbar{display:flex}
+  .sidebar{transform:translateX(-100%);top:56px}
+  .sidebar.open{transform:translateX(0)}
+}
+
+/* ── MAIN ── */
+.main{margin-left:220px;flex:1;padding:32px;min-height:100vh}
+@media(max-width:768px){.main{margin-left:0;padding:72px 16px 24px}}
+
+/* ── TAB HEADER ── */
+.tab-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.tab-header h2{font-size:1.4rem;font-weight:800;color:#1d1d1f}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.filters select{padding:8px 14px;border:1.5px solid #d2d2d7;border-radius:10px;font-size:13px;font-family:'Outfit',sans-serif;background:#fff;outline:none;cursor:pointer}
+.filters select:focus{border-color:#C9A227}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:'Outfit',sans-serif;transition:all .2s;text-decoration:none}
+.btn-primary{background:#C9A227;color:#000}
+.btn-primary:hover{background:#E8C547;transform:translateY(-1px)}
+.btn-danger{background:#fee;color:#c0392b;border:1px solid #fcc}
+.btn-danger:hover{background:#fdd;transform:translateY(-1px)}
+.btn-outline{background:#fff;color:#555;border:1.5px solid #d2d2d7}
+.btn-outline:hover{border-color:#C9A227;color:#9A7B1C}
+.btn-ghost{background:transparent;color:#888;border:1.5px solid #e0e0e0}
+.btn-ghost:hover{background:#f5f5f5;color:#333}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:8px}
+
+/* ── TABLE ── */
+.table-wrap{background:#fff;border-radius:12px;border:1px solid #d2d2d7;overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+thead{background:#f5f5f7}
+th{padding:12px 16px;text-align:left;font-weight:700;color:#6e6e73;font-size:11px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;border-bottom:1px solid #d2d2d7}
+td{padding:12px 16px;border-bottom:1px solid #f0f0f5;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.td-actions{display:flex;gap:6px;flex-wrap:wrap}
+.product-thumb{width:48px;height:48px;border-radius:8px;object-fit:contain;background:#f5f5f7;padding:2px}
+.img-ph{width:48px;height:48px;border-radius:8px;background:#f5f5f7;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999}
+
+/* Mobile cards para tabla */
+@media(max-width:640px){
+  .table-wrap{overflow-x:auto}
+  table{min-width:500px}
+}
+
+/* ── BADGES ── */
+.badge{padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;text-transform:uppercase;display:inline-block}
+.badge-iphone{background:#e3f2fd;color:#1565c0}
+.badge-macbook{background:#f3e5f5;color:#6a1b9a}
+.badge-ipad{background:#e8f5e9;color:#2e7d32}
+.badge-airpods{background:#fff3e0;color:#e65100}
+.badge-accesorio{background:#fce4ec;color:#880e4f}
+.badge-otro{background:#f5f5f5;color:#555}
+.status-disponible{background:#e8f5e9;color:#2e7d32}
+.status-agotado{background:#fce4ec;color:#880e4f}
+.status-pendiente{background:#fff8e1;color:#f57f17}
+.status-confirmado{background:#e3f2fd;color:#1565c0}
+.status-pagado{background:#e8f5e9;color:#2e7d32}
+.status-enviado{background:#f3e5f5;color:#6a1b9a}
+.status-entregado{background:#e8f5e9;color:#1b5e20}
+.status-cancelado{background:#fce4ec;color:#880e4f}
+
+/* ── STATUS SELECT ── */
+.status-select{padding:5px 10px;border:1.5px solid #d2d2d7;border-radius:8px;font-size:12px;cursor:pointer;outline:none;font-family:'Outfit',sans-serif}
+.status-select:focus{border-color:#C9A227}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;padding:32px;position:relative;transform:scale(.95);transition:transform .3s}
+.modal-overlay.open .modal{transform:scale(1)}
+.modal h2{font-size:1.2rem;font-weight:800;margin-bottom:24px;color:#1d1d1f}
+.modal-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:#f5f5f7;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s;color:#555}
+.modal-close:hover{background:#e0e0e0;color:#111}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid #e0e0e0}
+
+/* ── FORM ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:480px){.form-row{grid-template-columns:1fr}}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1.5px solid #d2d2d7;border-radius:10px;font-size:14px;font-family:'Outfit',sans-serif;outline:none;transition:border .2s;background:#fff;color:#1d1d1f}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#C9A227}
+.form-group textarea{resize:vertical;min-height:80px}
+
+/* ── IMAGE UPLOAD ── */
+.img-upload-area{border:2px dashed #d2d2d7;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s;background:#f9f9f9}
+.img-upload-area:hover{border-color:#C9A227}
+.img-upload-placeholder{display:flex;flex-direction:column;align-items:center;gap:6px}
+.img-upload-placeholder span{font-size:14px;font-weight:600;color:#6e6e73}
+.img-upload-placeholder small{font-size:12px;color:#aaa}
+
+/* ── ALERTS ── */
+.alert{padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:16px}
+.alert-error{background:#fde8e8;color:#c0392b;border:1px solid #f5c6cb}
+.alert-success{background:#e8f5e9;color:#2e7d32;border:1px solid #c3e6cb}
+
+/* ── STATES ── */
+.loading-state,.empty-state,.error-state{padding:60px;text-align:center;color:#6e6e73}
+.spinner{width:36px;height:36px;border:3px solid #e0e0e0;border-top-color:#C9A227;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state p,.error-state p{font-size:15px}
+.error-state p{color:#e53935}
+
+/* ── STATS CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:20px}
+.stat-label{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.stat-value{font-size:28px;font-weight:800;color:#1d1d1f}
+.stat-value span{font-size:14px;color:#C9A227;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR MOBILE -->
+<div class="topbar">
+  <h1>MacWorld Admin</h1>
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="admin-wrap">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <h1>MacWorld EC</h1>
+      <span>Panel Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" id="btn-products" onclick="showTab('products',this)">
+        📦 Productos
+      </button>
+      <button class="nav-btn" id="btn-orders" onclick="showTab('orders',this)">
+        🧾 Pedidos
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="admin-name-display">Cargando...</div>
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TAB: PRODUCTOS -->
+    <section id="tab-products">
+      <div class="tab-header">
+        <h2>Productos</h2>
+        <button class="btn btn-primary" onclick="openProductForm()">+ Nuevo producto</button>
+      </div>
+      <div class="filters">
+        <select onchange="loadProducts(this.value, currentCategory)">
+          <option value="">Todos los estados</option>
+          <option value="disponible">Disponible</option>
+          <option value="agotado">Agotado</option>
+        </select>
+        <select onchange="loadProducts(currentStatus, this.value)">
+          <option value="">Todas las categorías</option>
+          <option value="iphone">iPhone</option>
+          <option value="macbook">MacBook</option>
+          <option value="ipad">iPad</option>
+          <option value="airpods">AirPods</option>
+          <option value="accesorio">Accesorio</option>
+        </select>
+      </div>
+      <div id="products-container">
+        <div class="loading-state"><div class="spinner"></div><p>Cargando productos...</p></div>
+      </div>
+    </section>
+
+    <!-- TAB: PEDIDOS -->
+    <section id="tab-orders" style="display:none">
+      <div class="tab-header">
+        <h2>Pedidos</h2>
+        <select onchange="loadOrders(this.value)" id="order-filter" class="btn btn-ghost btn-sm">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="confirmado">Confirmados</option>
+          <option value="pagado">Pagados</option>
+          <option value="enviado">Enviados</option>
+          <option value="entregado">Entregados</option>
+          <option value="cancelado">Cancelados</option>
+        </select>
+      </div>
+      <div id="orders-container">
+        <div class="loading-state"><div class="spinner"></div><p>Cargando pedidos...</p></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODAL PRODUCTO -->
+<div class="modal-overlay" id="product-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 id="modal-title">Nuevo producto</h2>
+
+    <div class="alert alert-error"   id="modal-error"   style="display:none"></div>
+    <div class="alert alert-success" id="modal-success" style="display:none"></div>
+
+    <form id="product-form">
+      <input type="hidden" id="product-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="p-name" placeholder="iPhone 16 Pro 128GB" required>
+        </div>
+        <div class="form-group">
+          <label>Precio (USD) *</label>
+          <input type="number" id="p-price" placeholder="999" min="0" step="0.01" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción *</label>
+        <textarea id="p-description" placeholder="Describe el producto..." rows="3" required></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="p-category" required>
+            <option value="">Seleccionar...</option>
+            <option value="iphone">iPhone</option>
+            <option value="macbook">MacBook</option>
+            <option value="ipad">iPad</option>
+            <option value="airpods">AirPods</option>
+            <option value="accesorio">Accesorio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Condición</label>
+          <select id="p-condition">
+            <option value="nuevo">Nuevo</option>
+            <option value="reacondicionado">Reacondicionado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="p-status">
+            <option value="disponible">Disponible</option>
+            <option value="agotado">Agotado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Stock</label>
+          <input type="number" id="p-stock" placeholder="5" min="0" value="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Especificaciones (una por línea)</label>
+        <textarea id="p-specs" placeholder="128GB&#10;Chip A18 Pro&#10;Pantalla 6.3 pulgadas" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Imagen del producto</label>
+        <div class="img-upload-area" id="img-upload-area" onclick="document.getElementById('p-image').click()">
+          <div id="img-placeholder" class="img-upload-placeholder">
+            <span>📷 Haz clic para seleccionar imagen</span>
+            <small>JPG, PNG o WebP — máx 5MB</small>
+          </div>
+          <img id="img-preview" src="" alt="Preview" style="display:none;max-height:200px;border-radius:8px;margin:0 auto;display:none">
+        </div>
+        <input type="file" id="p-image" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none" onchange="previewImage(this)">
+        <p id="current-image-info" style="font-size:12px;color:#888;margin-top:6px;display:none"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">Guardar producto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── AUTH GUARD ─────────────────────────────────────────────────
+const token = localStorage.getItem('mw_token');
+let   authUser = null;
+try { authUser = JSON.parse(localStorage.getItem('mw_user') || 'null'); } catch(e) {}
+
+if (!token || !authUser || authUser.role !== 'admin') {
+  window.location.href = '/login.html';
+}
+
+document.getElementById('admin-name-display').textContent = authUser ? authUser.name : '';
+
+function doLogout() {
+  localStorage.removeItem('mw_token');
+  localStorage.removeItem('mw_user');
+  window.location.href = '/login.html';
+}
+
+// ── API HELPER ─────────────────────────────────────────────────
+async function apiFetch(url, options = {}) {
+  const headers = { 'Authorization': 'Bearer ' + token, ...(options.headers || {}) };
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  const res  = await fetch(url, { ...options, headers });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'Error en la API');
+  return data;
+}
+
+// ── SIDEBAR MOBILE ─────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ── TABS ───────────────────────────────────────────────────────
+let currentStatus   = '';
+let currentCategory = '';
+
+function showTab(name, btn) {
+  document.getElementById('tab-products').style.display = name === 'products' ? 'block' : 'none';
+  document.getElementById('tab-orders').style.display   = name === 'orders'   ? 'block' : 'none';
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + name).classList.add('active');
+  closeSidebar();
+  if (name === 'products') loadProducts();
+  if (name === 'orders')   loadOrders();
+}
+
+// ── PRODUCTOS ──────────────────────────────────────────────────
+async function loadProducts(status, category) {
+  if (status   !== undefined) currentStatus   = status;
+  if (category !== undefined) currentCategory = category;
+
+  const container = document.getElementById('products-container');
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Cargando...</p></div>';
+
+  try {
+    let url = '/api/products';
+    const params = new URLSearchParams();
+    if (currentStatus)   params.append('status', currentStatus);
+    if (currentCategory) params.append('category', currentCategory);
+    if ([...params].length) url += '?' + params.toString();
+
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token, 'x-admin': '1' } });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    renderProductsTable(data.data || data.products || []);
+  } catch(err) {
+    container.innerHTML = `<div class="error-state"><p>Error: ${err.message}</p></div>`;
+  }
+}
+
+function renderProductsTable(products) {
+  const container = document.getElementById('products-container');
+  if (!products.length) {
+    container.innerHTML = '<div class="empty-state"><p>No hay productos todavía. ¡Crea el primero!</p></div>';
+    return;
+  }
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Imagen</th><th>Nombre</th><th>Categoría</th>
+            <th>Condición</th><th>Precio</th><th>Stock</th>
+            <th>Estado</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr>
+              <td>${p.imageUrl
+                ? `<img src="${p.imageUrl}" class="product-thumb" onerror="this.style.display='none'">`
+                : '<div class="img-ph">Sin img</div>'}</td>
+              <td style="font-weight:600;max-width:160px">${p.name}</td>
+              <td><span class="badge badge-${p.category}">${p.category}</span></td>
+              <td>${p.condition === 'reacondicionado' ? 'Reacond.' : 'Nuevo'}</td>
+              <td style="font-weight:700">$${parseFloat(p.price).toFixed(2)}</td>
+              <td>${p.stock}</td>
+              <td><span class="badge status-${p.status}">${p.status}</span></td>
+              <td class="td-actions">
+                <button class="btn btn-outline btn-sm" onclick='editProduct(${JSON.stringify(p).replace(/'/g,"&#39;")})'>Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p._id}','${p.name.replace(/'/g,"\\'")}')">Eliminar</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ── FORM PRODUCTO ──────────────────────────────────────────────
+function openProductForm(product) {
+  document.getElementById('modal-title').textContent      = product ? 'Editar producto' : 'Nuevo producto';
+  document.getElementById('product-id').value             = product ? product._id : '';
+  document.getElementById('p-name').value                 = product ? product.name : '';
+  document.getElementById('p-price').value                = product ? product.price : '';
+  document.getElementById('p-description').value          = product ? product.description : '';
+  document.getElementById('p-category').value             = product ? product.category : '';
+  document.getElementById('p-condition').value            = product ? product.condition : 'nuevo';
+  document.getElementById('p-status').value               = product ? product.status : 'disponible';
+  document.getElementById('p-stock').value                = product ? product.stock : 1;
+  document.getElementById('p-specs').value                = product && product.specs ? product.specs.join('\n') : '';
+  document.getElementById('modal-error').style.display   = 'none';
+  document.getElementById('modal-success').style.display = 'none';
+
+  const preview = document.getElementById('img-preview');
+  const placeholder = document.getElementById('img-placeholder');
+  const imgInfo = document.getElementById('current-image-info');
+  if (product && product.imageUrl) {
+    preview.src               = product.imageUrl;
+    preview.style.display     = 'block';
+    placeholder.style.display = 'none';
+    imgInfo.textContent       = 'Imagen actual: ' + product.image;
+    imgInfo.style.display     = 'block';
+  } else {
+    preview.style.display     = 'none';
+    placeholder.style.display = 'flex';
+    imgInfo.style.display     = 'none';
+  }
+  document.getElementById('p-image').value = '';
+  document.getElementById('product-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function editProduct(product) { openProductForm(product); }
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('product-modal')) return;
+  document.getElementById('product-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function previewImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('img-preview');
+    preview.src               = e.target.result;
+    preview.style.display     = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+document.getElementById('product-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id      = document.getElementById('product-id').value;
+  const errorEl = document.getElementById('modal-error');
+  const saveBtn = document.getElementById('save-btn');
+  errorEl.style.display = 'none';
+  saveBtn.disabled      = true;
+  saveBtn.textContent   = 'Guardando...';
+
+  try {
+    const fd = new FormData();
+    fd.append('name',        document.getElementById('p-name').value);
+    fd.append('price',       document.getElementById('p-price').value);
+    fd.append('description', document.getElementById('p-description').value);
+    fd.append('category',    document.getElementById('p-category').value);
+    fd.append('condition',   document.getElementById('p-condition').value);
+    fd.append('status',      document.getElementById('p-status').value);
+    fd.append('stock',       document.getElementById('p-stock').value);
+    fd.append('specs',       document.getElementById('p-specs').value);
+    const imgFile = document.getElementById('p-image').files[0];
+    if (imgFile) fd.append('image', imgFile);
+
+    const url    = id ? `/api/products/${id}` : '/api/products';
+    const method = id ? 'PUT' : 'POST';
+    const res    = await fetch(url, { method, headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+    const data   = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    document.getElementById('modal-success').textContent   = data.message || 'Guardado correctamente';
+    document.getElementById('modal-success').style.display = 'block';
+    setTimeout(() => { closeModal(); loadProducts(); }, 1200);
+  } catch(err) {
+    errorEl.textContent   = err.message || 'Error al guardar';
+    errorEl.style.display = 'block';
+  } finally {
+    saveBtn.disabled    = false;
+    saveBtn.textContent = 'Guardar producto';
+  }
+});
+
+async function deleteProduct(id, name) {
+  if (!confirm(`¿Eliminar "${name}"?\nEsta acción no se puede deshacer.`)) return;
+  try {
+    await apiFetch(`/api/products/${id}`, { method: 'DELETE' });
+    loadProducts();
+  } catch(err) { alert('Error: ' + err.message); }
+}
+
+// ── PEDIDOS ────────────────────────────────────────────────────
+async function loadOrders(status) {
+  const container = document.getElementById('orders-container');
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Cargando...</p></div>';
+
+  try {
+    let url = '/api/orders';
+    if (status) url += '?status=' + status;
+    const res  = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    renderOrdersTable(data.data || data.orders || []);
+  } catch(err) {
+    container.innerHTML = `<div class="error-state"><p>Error: ${err.message}</p></div>`;
+  }
+}
+
+function renderOrdersTable(orders) {
+  const container = document.getElementById('orders-container');
+  if (!orders.length) {
+    container.innerHTML = '<div class="empty-state"><p>No hay pedidos todavía.</p></div>';
+    return;
+  }
+  const statusOpts = ['pendiente','confirmado','pagado','enviado','entregado','cancelado'];
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>N° Orden</th><th>Fecha</th><th>Cliente</th>
+            <th>Ciudad</th><th>Productos</th><th>Total</th>
+            <th>Estado</th><th>Cambiar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(o => `
+            <tr>
+              <td style="font-family:monospace;font-size:12px">${o.orderNumber}</td>
+              <td style="white-space:nowrap">${new Date(o.createdAt).toLocaleDateString('es-EC')}</td>
+              <td style="font-weight:600">${o.customerName}</td>
+              <td>${o.customerCity}</td>
+              <td style="font-size:12px;line-height:1.6">${o.items.map(i=>`${i.name} ×${i.quantity}`).join('<br>')}</td>
+              <td style="font-weight:700">$${parseFloat(o.total).toFixed(2)}</td>
+              <td><span class="badge status-${o.status}">${o.status}</span></td>
+              <td>
+                <select class="status-select" onchange="changeOrderStatus('${o._id}',this.value,this)">
+                  ${statusOpts.map(s=>`<option value="${s}"${s===o.status?' selected':''}>${s}</option>`).join('')}
+                </select>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function changeOrderStatus(id, status, el) {
+  try {
+    await apiFetch(`/api/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+    const row = el.closest('tr');
+    const pill = row.querySelector('.badge');
+    pill.textContent  = status;
+    pill.className    = `badge status-${status}`;
+  } catch(err) { alert('Error: ' + err.message); }
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+loadProducts();
+</script>
+</body>
+</html>

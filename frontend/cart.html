@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tu carrito — MacWorld Ecuador</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- ─── NAVBAR ──────────────────────────────────────── -->
+<nav class="navbar" id="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">MacWorld EC</a>
+    <div class="nav-actions">
+      <div id="nav-auth" style="display:flex;gap:8px">
+        <a href="/login.html" class="btn btn-outline btn-sm">Ingresar</a>
+      </div>
+      <div id="nav-user" style="display:none;align-items:center;gap:12px">
+        <span>Hola, <strong id="nav-user-name"></strong></span>
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm">Salir</button>
+      </div>
+      <a href="/admin/" id="nav-admin" class="btn btn-admin btn-sm" style="display:none">Admin</a>
+      <a href="/cart.html" class="cart-btn active">Carrito <span class="cart-badge" style="display:none">0</span></a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── CARRITO ────────────────────────────────────── -->
+<main class="cart-page">
+  <div class="container">
+    <h1 class="page-title">Tu pedido</h1>
+
+    <!-- Estado vacío -->
+    <div id="cart-empty" class="empty-state" style="display:none">
+      <p>Tu carrito esta vacio.</p>
+      <a href="/" class="btn btn-primary">Ver productos</a>
+    </div>
+
+    <!-- Contenido del carrito -->
+    <div class="cart-layout">
+      <div id="cart-items" class="cart-items"></div>
+
+      <!-- Resumen y checkout -->
+      <div id="checkout-section" class="checkout-box" style="display:none">
+        <h2>Resumen</h2>
+
+        <div class="cart-total-row">
+          <span>Total</span>
+          <strong id="cart-total">$0.00</strong>
+        </div>
+
+        <div class="checkout-divider"></div>
+
+        <!-- Datos del cliente -->
+        <h3 class="form-section-title">Tus datos de entrega</h3>
+
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="customer-name" placeholder="Juan Perez" required>
+        </div>
+        <div class="form-group">
+          <label>Direccion *</label>
+          <input type="text" id="customer-address" placeholder="Av. 9 de Octubre 123">
+        </div>
+        <div class="form-group">
+          <label>Ciudad *</label>
+          <input type="text" id="customer-city" placeholder="Guayaquil" value="Guayaquil">
+        </div>
+        <div class="form-group">
+          <label>Tu WhatsApp (opcional)</label>
+          <input type="tel" id="customer-phone" placeholder="0991234567">
+        </div>
+        <div class="form-group">
+          <label>Notas (opcional)</label>
+          <textarea id="customer-notes" placeholder="Instrucciones especiales..." rows="2"></textarea>
+        </div>
+
+        <!-- Mensaje de error -->
+        <div class="alert alert-error" id="checkout-error" style="display:none"></div>
+
+        <!-- BOTÓN PRINCIPAL DE CHECKOUT -->
+        <!--
+          CÓMO FUNCIONA:
+          1. Guarda la orden en MongoDB
+          2. El backend genera el mensaje formateado SIN emojis
+          3. Abre WhatsApp con el mensaje prellenado
+
+          CAMBIAR NÚMERO DE WHATSAPP: edita WHATSAPP_NUMBER en backend/.env
+          CAMBIAR FORMATO DEL MENSAJE: edita buildWhatsAppMessage() en backend/routes/orders.js
+        -->
+        <button
+          class="btn btn-whatsapp btn-full btn-lg"
+          id="checkout-btn"
+          onclick="handleCheckout()"
+        >
+          Finalizar pedido por WhatsApp
+        </button>
+
+        <p class="checkout-note">
+          Al hacer clic, se abrira WhatsApp con el detalle de tu pedido.
+          Nuestro equipo confirma disponibilidad y coordina el pago.
+        </p>
+
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="if(confirm('Vaciar el carrito?')){Cart.clearCart();Cart.renderCartPage();}"
+          style="margin-top:8px"
+        >
+          Vaciar carrito
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<a href="#" onclick="openWA()" class="wa-float">Consultar por WhatsApp</a>
+
+<script src="/js/auth.js"></script>
+<script src="/js/cart.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  // Pre-rellenar nombre si está logueado
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = Auth.getUser();
+    if (user) {
+      document.getElementById('customer-name').value = user.name;
+    }
+    Cart.renderCartPage();
+  });
+
+  // ── Procesar checkout ──────────────────────────────────
+  async function handleCheckout() {
+    const name    = document.getElementById('customer-name').value.trim();
+    const address = document.getElementById('customer-address').value.trim();
+    const city    = document.getElementById('customer-city').value.trim();
+    const phone   = document.getElementById('customer-phone').value.trim();
+    const notes   = document.getElementById('customer-notes').value.trim();
+    const errorEl = document.getElementById('checkout-error');
+    const btn     = document.getElementById('checkout-btn');
+
+    errorEl.style.display = 'none';
+
+    // Validaciones del lado del cliente
+    if (!name) { showError('El nombre es obligatorio.'); return; }
+    if (!address) { showError('La direccion es obligatoria.'); return; }
+    if (!city) { showError('La ciudad es obligatoria.'); return; }
+
+    const items = Cart.toOrderItems();
+    if (!items.length) { showError('Tu carrito esta vacio.'); return; }
+
+    btn.disabled    = true;
+    btn.textContent = 'Procesando...';
+
+    try {
+      // Enviar orden al backend — él genera el mensaje y devuelve la URL de WA
+      const res = await API.orders.create({
+        items,
+        customerName:    name,
+        customerAddress: address,
+        customerCity:    city,
+        customerPhone:   phone,
+        notes,
+      });
+
+      // Limpiar carrito después del pedido exitoso
+      Cart.clearCart();
+
+      // Abrir WhatsApp con el mensaje generado por el backend
+      window.open(res.whatsappUrl, '_blank');
+
+      // Redirigir a confirmación
+      window.location.href = '/orders.html?new=1&order=' + res.order.orderNumber;
+    } catch (err) {
+      showError(err.message || 'Ocurrio un error. Intenta de nuevo.');
+      btn.disabled    = false;
+      btn.textContent = 'Finalizar pedido por WhatsApp';
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('checkout-error');
+    el.textContent   = msg;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  const WA_NUMBER = '593991234567'; // ← Cambiar igual que en index.html
+  function openWA() {
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Hola! Tengo preguntas sobre un pedido.')}`, '_blank');
+  }
+
+  // Re-renderizar si el carrito cambia
+  document.addEventListener('cartUpdated', () => Cart.renderCartPage());
+</script>
+</body>
+</html>

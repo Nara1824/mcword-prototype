@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis pedidos — MacWorld Ecuador</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">MacWorld EC</a>
+    <div class="nav-actions">
+      <div id="nav-auth" style="display:flex;gap:8px"><a href="/login.html" class="btn btn-outline btn-sm">Ingresar</a></div>
+      <div id="nav-user" style="display:none;align-items:center;gap:12px">
+        <span>Hola, <strong id="nav-user-name"></strong></span>
+        <button onclick="Auth.logout()" class="btn btn-ghost btn-sm">Salir</button>
+      </div>
+      <a href="/admin/" id="nav-admin" class="btn btn-admin btn-sm" style="display:none">Admin</a>
+      <a href="/cart.html" class="cart-btn">Carrito <span class="cart-badge" style="display:none">0</span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-main">
+  <div class="container">
+
+    <!-- Confirmación de nuevo pedido -->
+    <div class="alert alert-success new-order-banner" id="new-order-banner" style="display:none">
+      <strong>Pedido enviado correctamente.</strong>
+      Si no se abrió WhatsApp automáticamente,
+      <a href="#" id="retry-wa">haz clic aqui para abrirlo.</a>
+    </div>
+
+    <h1 class="page-title">Mis pedidos</h1>
+
+    <div id="orders-container">
+      <div class="loading-state"><div class="spinner"></div><p>Cargando...</p></div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/auth.js"></script>
+<script src="/js/cart.js"></script>
+<script src="/js/api.js"></script>
+<script>
+  // Requiere autenticación
+  Auth.requireAuth();
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Mostrar banner de nuevo pedido si viene del checkout
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') === '1') {
+      const banner = document.getElementById('new-order-banner');
+      banner.style.display = 'block';
+      const orderNum = params.get('order');
+      if (orderNum) banner.querySelector('strong').textContent = `Pedido ${orderNum} enviado correctamente.`;
+    }
+
+    await loadOrders();
+  });
+
+  async function loadOrders() {
+    const container = document.getElementById('orders-container');
+    try {
+      const res    = await API.orders.mine();
+      const orders = res.orders;
+
+      if (!orders.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Aun no tienes pedidos.</p>
+            <a href="/" class="btn btn-primary">Ver productos</a>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = orders.map((o) => `
+        <div class="order-card">
+          <div class="order-header">
+            <div>
+              <span class="order-number">${o.orderNumber}</span>
+              <span class="order-date">${new Date(o.createdAt).toLocaleDateString('es-EC', {day:'2-digit',month:'short',year:'numeric'})}</span>
+            </div>
+            <span class="order-status status-${o.status}">${statusLabel(o.status)}</span>
+          </div>
+          <div class="order-items">
+            ${o.items.map((item) => `
+              <div class="order-item">
+                <span class="oi-name">${item.name}</span>
+                <span class="oi-qty">x${item.quantity}</span>
+                <span class="oi-price">$${(item.price * item.quantity).toFixed(2)}</span>
+              </div>`).join('')}
+          </div>
+          <div class="order-footer">
+            <span class="order-total">Total: <strong>$${o.total.toFixed(2)}</strong></span>
+            <span class="order-city">${o.customerCity}</span>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      container.innerHTML = `<div class="error-state"><p>${err.message}</p><button onclick="loadOrders()">Reintentar</button></div>`;
+    }
+  }
+
+  function statusLabel(s) {
+    const map = { pendiente:'Pendiente', confirmado:'Confirmado', pagado:'Pagado', enviado:'Enviado', entregado:'Entregado', cancelado:'Cancelado' };
+    return map[s] || s;
+  }
+</script>
+</body>
+</html>

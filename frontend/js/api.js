@@ -12,7 +12,7 @@
 // Para cambiarla manualmente: reemplaza el valor del if
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://localhost:3000/api'
-  : `${window.location.origin}/api`;
+  : 'https://mcword-prototype.onrender.com/api';
 
 // ─────────────────────────────────────────────────────────────
 // fetchAPI — Wrapper de fetch con manejo de errores
